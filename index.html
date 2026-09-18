@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>店舗用 リアルタイム更新・登録画面</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Leaflet (マップライブラリ) の読み込み -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style> body { font-family: 'Noto Sans JP', sans-serif; } </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 flex justify-center p-4">
+
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-5 my-auto">
+    
+    <header class="border-b pb-3 mb-4">
+      <span class="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-bold">関係者専用</span>
+      <h1 class="text-xl font-bold text-slate-800 mt-1">店舗情報 管理画面</h1>
+    </header>
+
+    <!-- タブ切り替え -->
+    <div class="flex gap-2 mb-5">
+      <button id="tab-update" onclick="switchTab('update')" class="flex-1 py-2 text-sm font-bold rounded-xl bg-indigo-600 text-white shadow-sm transition-all">情報の更新</button>
+      <button id="tab-register" onclick="switchTab('register')" class="flex-1 py-2 text-sm font-bold rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all">新規店舗登録</button>
+    </div>
+
+    <!-- ＝＝＝ 新規登録セクション ＝＝＝ -->
+    <div id="section-register" class="hidden transition-all">
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-600 mb-1">店舗名 (必須)</label>
+        <input type="text" id="reg-name" placeholder="例: たこ焼き ◯◯" class="w-full p-3 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-600 mb-1">ジャンル (必須)</label>
+        <select id="reg-category" class="w-full p-3 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-indigo-500">
+          <option value="飲食">🍔 飲食</option>
+          <option value="ゲーム">🎯 ゲーム</option>
+          <option value="その他">🎁 その他</option>
+        </select>
+      </div>
+
+      <!-- 🗺️ 位置選択ミニマップ -->
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-600 mb-1">店舗の位置を設定 (必須: タップしてピンを刺す)</label>
+        <div id="register-map" class="w-full h-48 rounded-xl border-2 border-slate-200 z-0"></div>
+        <p id="location-status" class="text-[11px] font-bold text-indigo-600 mt-1">※地図上をタップして店舗の位置を指定してください</p>
+      </div>
+
+      <div class="mb-6 bg-rose-50 p-3 rounded-xl border border-rose-200">
+        <label class="block text-xs font-bold text-rose-600 mb-1">店舗パスワード (必須)</label>
+        <input type="text" id="reg-password" placeholder="今後の更新に使う合言葉" class="w-full p-3 border border-rose-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-rose-500">
+      </div>
+
+      <button onclick="submitRegister()" id="btn-register" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2">
+        ✨ この位置で新規登録する
+      </button>
+    </div>
+
+
+    <!-- ＝＝＝ 既存店舗の更新セクション ＝＝＝ -->
+    <div id="section-update" class="transition-all">
+      <div class="mb-5">
+        <label class="block text-xs font-bold text-slate-600 mb-1">① 店舗を選択してください</label>
+        <select id="select-store" onchange="onSelectStore()" class="w-full p-3 border-2 border-indigo-200 rounded-xl font-bold text-slate-700 bg-indigo-50/30 focus:outline-none focus:border-indigo-500">
+          <option value="">読み込み中...</option>
+        </select>
+      </div>
+
+      <div id="form-area" class="opacity-50 pointer-events-none transition-all">
+        <!-- 混雑状況 -->
+        <div class="mb-5">
+          <label class="block text-xs font-bold text-slate-600 mb-2">② 現在の状況をタップ</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="setStatus('空いています')" id="btn-free" class="p-3 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1 bg-white border-slate-200 text-slate-600">🟢 空いています</button>
+            <button type="button" onclick="setStatus('やや混雑')" id="btn-busy1" class="p-3 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1 bg-white border-slate-200 text-slate-600">🟡 やや混雑</button>
+            <button type="button" onclick="setStatus('混雑中')" id="btn-busy2" class="p-3 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1 bg-white border-slate-200 text-slate-600">🔴 混雑中</button>
+            <button type="button" onclick="setStatus('完売/終了')" id="btn-closed" class="p-3 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1 bg-white border-slate-200 text-slate-600">⚪ 完売 / 終了</button>
+          </div>
+        </div>
+
+        <!-- メニュー -->
+        <div class="mb-5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div class="flex justify-between items-center mb-2">
+            <label class="block text-xs font-bold text-slate-600">③ メニュー・価格の変更（任意）</label>
+            <button type="button" onclick="addMenuField()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm">＋ 追加</button>
+          </div>
+          <div id="menus-container" class="space-y-2"></div>
+        </div>
+
+        <!-- 写真 -->
+        <div class="mb-5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <label class="block text-xs font-bold text-slate-600 mb-1">④ 店舗写真の変更（任意）</label>
+          <input type="file" id="input-image" accept="image/*" onchange="previewImage(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
+          <div id="image-preview-container" class="mt-2 hidden">
+            <img id="image-preview" src="" alt="写真プレビュー" class="w-full h-36 object-cover rounded-xl border">
+          </div>
+        </div>
+
+        <!-- パスワード -->
+        <div class="mb-6 bg-rose-50 p-3 rounded-xl border border-rose-200">
+          <label class="block text-xs font-bold text-rose-600 mb-1">⑤ 店舗パスワード（必須）</label>
+          <input type="password" id="input-password" placeholder="合言葉を入力してください" class="w-full p-3 border border-rose-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-rose-500">
+        </div>
+
+        <button onclick="submitUpdate()" id="btn-submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2">
+          🚀 状況をマップに即時反映する
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ⚠️ 新しいデプロイのURLをここに貼り付けてください
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxOHYiRPW_wukxR6yEIbmfQJANF4ms2MuS4ZdSlaAE0W8OFIsXOL7jklimnywH2prsrMg/exec";
+
+    let storesData = [];
+    let selectedStatus = "";
+    let currentBase64Image = "";
+
+    // マップ用変数
+    let regMap = null;
+    let regMarker = null;
+    let selectedLat = null;
+    let selectedLng = null;
+
+    // タブ切り替え
+    function switchTab(tab) {
+      const secUpdate = document.getElementById('section-update');
+      const secRegister = document.getElementById('section-register');
+      const tabUpdate = document.getElementById('tab-update');
+      const tabRegister = document.getElementById('tab-register');
+
+      if (tab === 'update') {
+        secUpdate.classList.remove('hidden');
+        secRegister.classList.add('hidden');
+        tabUpdate.className = "flex-1 py-2 text-sm font-bold rounded-xl bg-indigo-600 text-white shadow-sm transition-all";
+        tabRegister.className = "flex-1 py-2 text-sm font-bold rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all";
+      } else {
+        secUpdate.classList.add('hidden');
+        secRegister.classList.remove('hidden');
+        tabUpdate.className = "flex-1 py-2 text-sm font-bold rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all";
+        tabRegister.className = "flex-1 py-2 text-sm font-bold rounded-xl bg-emerald-600 text-white shadow-sm transition-all";
+        
+        // 新規登録タブを開いた時に地図を初期化・描画調整
+        initRegisterMap();
+      }
+    }
+
+    // 新規登録用の地図初期化処理
+    function initRegisterMap() {
+      if (!regMap) {
+        // 初期表示の中心座標（既存データがあれば1店舗目の位置、なければデフォルト値）
+        let initLat = 33.317;
+        let initLng = 130.517;
+
+        if (storesData.length > 0 && storesData[0]["緯度"] && storesData[0]["経度"]) {
+          initLat = parseFloat(storesData[0]["緯度"]);
+          initLng = parseFloat(storesData[0]["経度"]);
+        }
+
+        regMap = L.map('register-map').setView([initLat, initLng], 16);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(regMap);
+
+        // 地図タップ時の処理
+        regMap.on('click', function(e) {
+          selectedLat = e.latlng.lat;
+          selectedLng = e.latlng.lng;
+
+          if (regMarker) {
+            regMarker.setLatLng(e.latlng);
+          } else {
+            regMarker = L.marker(e.latlng).addTo(regMap);
+          }
+
+          document.getElementById('location-status').innerHTML = 
+            `📍 位置を設定しました<br><span class="text-[10px] text-slate-400">（緯度: ${selectedLat.toFixed(5)}, 経度: ${selectedLng.toFixed(5)}）</span>`;
+          document.getElementById('location-status').className = "text-[11px] font-bold text-emerald-600 mt-1";
+        });
+      }
+
+      // 非表示状態から表示された際の崩れ防止
+      setTimeout(() => { regMap.invalidateSize(); }, 200);
+    }
+
+    async function loadStores() {
+      try {
+        const res = await fetch(GAS_URL);
+        storesData = await res.json();
+        
+        const select = document.getElementById('select-store');
+        select.innerHTML = '<option value="">-- 店舗を選択してください --</option>';
+        
+        storesData.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s["ID"];
+          opt.innerText = `${s["ID"]}. ${s["店舗名"]}`;
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        alert("店舗データの読み込みに失敗しました。");
+      }
+    }
+
+    // ＝＝＝ 新規登録の送信 ＝＝＝
+    async function submitRegister() {
+      const name = document.getElementById('reg-name').value.trim();
+      const category = document.getElementById('reg-category').value;
+      const password = document.getElementById('reg-password').value.trim();
+
+      if (!name || !password) return alert("店舗名とパスワードは必須です。");
+      if (selectedLat === null || selectedLng === null) return alert("地図上をタップして店舗の位置を指定してください。");
+
+      const btn = document.getElementById('btn-register');
+      btn.disabled = true;
+      btn.innerText = "⏳ 登録中...";
+
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: "register",
+            name: name,
+            category: category,
+            password: password,
+            lat: selectedLat,
+            lng: selectedLng
+          })
+        });
+        const result = await response.json();
+        
+        if (result.status === "success") {
+          alert("店舗の新規登録が完了しました！\nすぐにマップ上にピンが反映されます。");
+          document.getElementById('reg-name').value = "";
+          document.getElementById('reg-password').value = "";
+          selectedLat = null;
+          selectedLng = null;
+          if (regMarker) regMap.removeLayer(regMarker);
+          document.getElementById('location-status').innerText = "※地図上をタップして店舗の位置を指定してください";
+          document.getElementById('location-status').className = "text-[11px] font-bold text-indigo-600 mt-1";
+          
+          await loadStores();
+          switchTab('update');
+        } else {
+          alert("登録エラー: " + result.message);
+        }
+      } catch (err) {
+        alert("通信エラーが発生しました。");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "✨ この位置で新規登録する";
+      }
+    }
+
+    // ＝＝＝ 既存店舗の更新処理 ＝＝＝
+    function onSelectStore() {
+      const id = document.getElementById('select-store').value;
+      const formArea = document.getElementById('form-area');
+      document.getElementById('input-password').value = "";
+
+      if (!id) {
+        formArea.classList.add('opacity-50', 'pointer-events-none');
+        return;
+      }
+      formArea.classList.remove('opacity-50', 'pointer-events-none');
+
+      const store = storesData.find(s => String(s["ID"]) === String(id));
+      if (store) {
+        setStatus(store["混雑状況"] || '空いています');
+        
+        const container = document.getElementById('menus-container');
+        container.innerHTML = '';
+        let idx = 1, count = 0;
+        while (store[`メニュー${idx}`] !== undefined) {
+          const name = store[`メニュー${idx}`] || '';
+          const price = store[`価格${idx}`] || '';
+          if (name || price) { addMenuField(name, price); count++; }
+          idx++;
+        }
+        if (count === 0) addMenuField();
+
+        currentBase64Image = "";
+        document.getElementById('input-image').value = "";
+        const previewImg = document.getElementById('image-preview');
+        const previewContainer = document.getElementById('image-preview-container');
+
+        if (store["画像URL"] && String(store["画像URL"]).trim() !== '') {
+          previewImg.src = store["画像URL"];
+          previewContainer.classList.remove('hidden');
+        } else {
+          previewImg.src = "";
+          previewContainer.classList.add('hidden');
+        }
+      }
+    }
+
+    function addMenuField(name = '', price = '') {
+      const container = document.getElementById('menus-container');
+      const div = document.createElement('div');
+      div.className = "flex gap-1.5 items-center menu-row";
+      div.innerHTML = `
+        <input type="text" placeholder="品名 (例: たこ焼き)" value="${name}" class="menu-name flex-1 p-2 border rounded-lg text-xs">
+        <input type="text" placeholder="価格" value="${price}" class="menu-price w-20 p-2 border rounded-lg text-xs">
+        <button type="button" onclick="removeMenuField(this)" class="p-2 text-slate-400 hover:text-rose-500 font-bold text-xs">✕</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function removeMenuField(btn) {
+      const row = btn.closest('.menu-row');
+      const container = document.getElementById('menus-container');
+      if (container.children.length > 1) row.remove();
+      else { row.querySelector('.menu-name').value = ''; row.querySelector('.menu-price').value = ''; }
+    }
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          currentBase64Image = e.target.result;
+          document.getElementById('image-preview').src = currentBase64Image;
+          document.getElementById('image-preview-container').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function setStatus(status) {
+      selectedStatus = status;
+      const buttons = {
+        '空いています': { id: 'btn-free', activeClass: 'bg-emerald-500 border-emerald-500 text-white' },
+        'やや混雑': { id: 'btn-busy1', activeClass: 'bg-amber-500 border-amber-500 text-white' },
+        '混雑中': { id: 'btn-busy2', activeClass: 'bg-rose-500 border-rose-500 text-white' },
+        '完売/終了': { id: 'btn-closed', activeClass: 'bg-slate-500 border-slate-500 text-white' }
+      };
+
+      Object.keys(buttons).forEach(key => {
+        const btn = document.getElementById(buttons[key].id);
+        if (btn) {
+          btn.className = "p-3 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1 transition-all ";
+          if (key === status) btn.className += buttons[key].activeClass + " shadow-md scale-105";
+          else btn.className += "bg-white border-slate-200 text-slate-500 hover:bg-slate-50";
+        }
+      });
+    }
+
+    async function submitUpdate() {
+      const id = document.getElementById('select-store').value;
+      const password = document.getElementById('input-password').value;
+      if (!id) return alert("店舗を選択してください。");
+      if (!password) return alert("店舗パスワードを入力してください。");
+
+      const submitBtn = document.getElementById('btn-submit');
+      submitBtn.disabled = true;
+      submitBtn.innerText = "⏳ 更新中...";
+
+      const menuRows = document.querySelectorAll('.menu-row');
+      const menus = [];
+      menuRows.forEach(row => {
+        const name = row.querySelector('.menu-name').value.trim();
+        const price = row.querySelector('.menu-price').value.trim();
+        if (name || price) menus.push({ name: name, price: price });
+      });
+
+      const payload = {
+        action: "update",
+        id: id,
+        password: password,
+        status: selectedStatus,
+        menus: menus
+      };
+      if (currentBase64Image) payload.base64Image = currentBase64Image;
+
+      try {
+        const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const result = await response.json();
+
+        if (result.status === "error") alert(result.message);
+        else {
+          alert("更新が完了しました！");
+          document.getElementById('input-password').value = "";
+          await loadStores();
+          document.getElementById('select-store').value = id;
+          onSelectStore();
+        }
+      } catch (err) { alert("通信エラーが発生しました。"); }
+      finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "🚀 状況をマップに即時反映する";
+      }
+    }
+
+    window.onload = loadStores;
+  </script>
+</body>
+</html>
