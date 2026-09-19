@@ -6,7 +6,6 @@
   <title>店舗用 リアルタイム更新・登録画面</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <!-- Leaflet (マップライブラリ) の読み込み -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style> body { font-family: 'Noto Sans JP', sans-serif; } </style>
@@ -42,7 +41,6 @@
         </select>
       </div>
 
-      <!-- 🗺️ 位置選択ミニマップ -->
       <div class="mb-4">
         <label class="block text-xs font-bold text-slate-600 mb-1">店舗の位置を設定 (必須: タップしてピンを刺す)</label>
         <div id="register-map" class="w-full h-48 rounded-xl border-2 border-slate-200 z-0"></div>
@@ -51,7 +49,7 @@
 
       <div class="mb-6 bg-rose-50 p-3 rounded-xl border border-rose-200">
         <label class="block text-xs font-bold text-rose-600 mb-1">店舗パスワード (必須)</label>
-        <input type="text" id="reg-password" placeholder="今後の更新に使う合言葉" class="w-full p-3 border border-rose-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-rose-500">
+        <input type="text" id="reg-password" placeholder="今後の更新・削除に使う合言葉" class="w-full p-3 border border-rose-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-rose-500">
       </div>
 
       <button onclick="submitRegister()" id="btn-register" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2">
@@ -60,7 +58,7 @@
     </div>
 
 
-    <!-- ＝＝＝ 既存店舗の更新セクション ＝＝＝ -->
+    <!-- ＝＝＝ 既存店舗の更新・削除セクション ＝＝＝ -->
     <div id="section-update" class="transition-all">
       <div class="mb-5">
         <label class="block text-xs font-bold text-slate-600 mb-1">① 店舗を選択してください</label>
@@ -70,6 +68,13 @@
       </div>
 
       <div id="form-area" class="opacity-50 pointer-events-none transition-all">
+        
+        <!-- 店舗名変更 -->
+        <div class="mb-5">
+          <label class="block text-xs font-bold text-slate-600 mb-1">店舗名称</label>
+          <input type="text" id="input-store-name" placeholder="店舗名" class="w-full p-3 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-indigo-500">
+        </div>
+
         <!-- 混雑状況 -->
         <div class="mb-5">
           <label class="block text-xs font-bold text-slate-600 mb-2">② 現在の状況をタップ</label>
@@ -108,26 +113,36 @@
         <button onclick="submitUpdate()" id="btn-submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2">
           🚀 状況をマップに即時反映する
         </button>
+
+        <!-- 🗑️ 危険な操作（削除エリア） -->
+        <div class="mt-8 pt-6 border-t border-slate-200">
+          <div class="bg-rose-50 p-4 rounded-xl border border-rose-200">
+            <h3 class="text-xs font-bold text-rose-700 mb-1">⚠️ 店舗情報の削除</h3>
+            <p class="text-[11px] text-rose-600 mb-3">この店舗のデータを完全に削除します。実行には上記の「⑤ 店舗パスワード」が必要です。</p>
+            <button type="button" onclick="submitDelete()" id="btn-delete" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl shadow-sm text-xs transition-all flex items-center justify-center gap-1">
+              🗑️ この店舗を削除する
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
 
   </div>
 
   <script>
-    // ⚠️ 新しいデプロイのURLをここに貼り付けてください
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbxOHYiRPW_wukxR6yEIbmfQJANF4ms2MuS4ZdSlaAE0W8OFIsXOL7jklimnywH2prsrMg/exec";
+    // ⚠️ ご自身のGASウェブアプリURLに書き換えてください
+    const GAS_URL = "★ここに新しいGASのURLを貼り付けてください★";
 
     let storesData = [];
     let selectedStatus = "";
     let currentBase64Image = "";
 
-    // マップ用変数
     let regMap = null;
     let regMarker = null;
     let selectedLat = null;
     let selectedLng = null;
 
-    // タブ切り替え
     function switchTab(tab) {
       const secUpdate = document.getElementById('section-update');
       const secRegister = document.getElementById('section-register');
@@ -144,16 +159,12 @@
         secRegister.classList.remove('hidden');
         tabUpdate.className = "flex-1 py-2 text-sm font-bold rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all";
         tabRegister.className = "flex-1 py-2 text-sm font-bold rounded-xl bg-emerald-600 text-white shadow-sm transition-all";
-        
-        // 新規登録タブを開いた時に地図を初期化・描画調整
         initRegisterMap();
       }
     }
 
-    // 新規登録用の地図初期化処理
     function initRegisterMap() {
       if (!regMap) {
-        // 初期表示の中心座標（既存データがあれば1店舗目の位置、なければデフォルト値）
         let initLat = 33.317;
         let initLng = 130.517;
 
@@ -168,24 +179,18 @@
           attribution: '© OpenStreetMap'
         }).addTo(regMap);
 
-        // 地図タップ時の処理
         regMap.on('click', function(e) {
           selectedLat = e.latlng.lat;
           selectedLng = e.latlng.lng;
 
-          if (regMarker) {
-            regMarker.setLatLng(e.latlng);
-          } else {
-            regMarker = L.marker(e.latlng).addTo(regMap);
-          }
+          if (regMarker) regMarker.setLatLng(e.latlng);
+          else regMarker = L.marker(e.latlng).addTo(regMap);
 
           document.getElementById('location-status').innerHTML = 
             `📍 位置を設定しました<br><span class="text-[10px] text-slate-400">（緯度: ${selectedLat.toFixed(5)}, 経度: ${selectedLng.toFixed(5)}）</span>`;
           document.getElementById('location-status').className = "text-[11px] font-bold text-emerald-600 mt-1";
         });
       }
-
-      // 非表示状態から表示された際の崩れ防止
       setTimeout(() => { regMap.invalidateSize(); }, 200);
     }
 
@@ -208,7 +213,6 @@
       }
     }
 
-    // ＝＝＝ 新規登録の送信 ＝＝＝
     async function submitRegister() {
       const name = document.getElementById('reg-name').value.trim();
       const category = document.getElementById('reg-category').value;
@@ -236,7 +240,7 @@
         const result = await response.json();
         
         if (result.status === "success") {
-          alert("店舗の新規登録が完了しました！\nすぐにマップ上にピンが反映されます。");
+          alert("店舗の新規登録が完了しました！");
           document.getElementById('reg-name').value = "";
           document.getElementById('reg-password').value = "";
           selectedLat = null;
@@ -258,7 +262,6 @@
       }
     }
 
-    // ＝＝＝ 既存店舗の更新処理 ＝＝＝
     function onSelectStore() {
       const id = document.getElementById('select-store').value;
       const formArea = document.getElementById('form-area');
@@ -272,6 +275,7 @@
 
       const store = storesData.find(s => String(s["ID"]) === String(id));
       if (store) {
+        document.getElementById('input-store-name').value = store["店舗名"] || '';
         setStatus(store["混雑状況"] || '空いています');
         
         const container = document.getElementById('menus-container');
@@ -351,10 +355,14 @@
       });
     }
 
+    // 店舗情報の更新（店舗名の変更も同時に送信）
     async function submitUpdate() {
       const id = document.getElementById('select-store').value;
       const password = document.getElementById('input-password').value;
+      const name = document.getElementById('input-store-name').value.trim();
+
       if (!id) return alert("店舗を選択してください。");
+      if (!name) return alert("店舗名を入力してください。");
       if (!password) return alert("店舗パスワードを入力してください。");
 
       const submitBtn = document.getElementById('btn-submit');
@@ -364,14 +372,15 @@
       const menuRows = document.querySelectorAll('.menu-row');
       const menus = [];
       menuRows.forEach(row => {
-        const name = row.querySelector('.menu-name').value.trim();
+        const mName = row.querySelector('.menu-name').value.trim();
         const price = row.querySelector('.menu-price').value.trim();
-        if (name || price) menus.push({ name: name, price: price });
+        if (mName || price) menus.push({ name: mName, price: price });
       });
 
       const payload = {
         action: "update",
         id: id,
+        name: name,
         password: password,
         status: selectedStatus,
         menus: menus
@@ -384,7 +393,7 @@
 
         if (result.status === "error") alert(result.message);
         else {
-          alert("更新が完了しました！");
+          alert("店舗情報を更新しました！");
           document.getElementById('input-password').value = "";
           await loadStores();
           document.getElementById('select-store').value = id;
@@ -394,6 +403,50 @@
       finally {
         submitBtn.disabled = false;
         submitBtn.innerText = "🚀 状況をマップに即時反映する";
+      }
+    }
+
+    // 店舗情報の削除処理
+    async function submitDelete() {
+      const id = document.getElementById('select-store').value;
+      const password = document.getElementById('input-password').value;
+      const storeName = document.getElementById('input-store-name').value;
+
+      if (!id) return alert("店舗を選択してください。");
+      if (!password) return alert("削除を行うには「⑤ 店舗パスワード」の入力が必要です。");
+
+      const confirmResult = confirm(`本当に「${storeName}」の店舗データを完全削除しますか？\n※この操作は取り消せません。`);
+      if (!confirmResult) return;
+
+      const deleteBtn = document.getElementById('btn-delete');
+      deleteBtn.disabled = true;
+      deleteBtn.innerText = "⏳ 削除中...";
+
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: "delete",
+            id: id,
+            password: password
+          })
+        });
+        const result = await response.json();
+
+        if (result.status === "error") {
+          alert(result.message);
+        } else {
+          alert("店舗情報を削除しました。");
+          document.getElementById('input-password').value = "";
+          await loadStores();
+          document.getElementById('select-store').value = "";
+          onSelectStore();
+        }
+      } catch (err) {
+        alert("通信エラーが発生しました。");
+      } finally {
+        deleteBtn.disabled = false;
+        deleteBtn.innerText = "🗑️ この店舗を削除する";
       }
     }
 
