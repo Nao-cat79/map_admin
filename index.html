@@ -10,9 +10,9 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style> body { font-family: 'Noto Sans JP', sans-serif; } </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 flex justify-center p-4">
+<body class="bg-slate-100 min-h-screen text-slate-800 flex justify-center p-3 sm:p-4">
 
-  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-5 my-auto">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-4 sm:p-5 my-auto overflow-hidden">
     
     <header class="border-b pb-3 mb-4">
       <span class="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-bold">関係者専用</span>
@@ -86,13 +86,13 @@
           </div>
         </div>
 
-        <!-- メニュー -->
+        <!-- メニュー（スマホ表示最適化済み） -->
         <div class="mb-5 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <div class="flex justify-between items-center mb-2">
             <label class="block text-xs font-bold text-slate-600">③ メニュー・価格の変更（任意）</label>
-            <button type="button" onclick="addMenuField()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm">＋ 追加</button>
+            <button type="button" onclick="addMenuField()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm shrink-0">＋ 追加</button>
           </div>
-          <div id="menus-container" class="space-y-2"></div>
+          <div id="menus-container" class="space-y-2 w-full"></div>
         </div>
 
         <!-- 写真 -->
@@ -304,14 +304,15 @@
       }
     }
 
+    // メニュー入力行（スマホ横幅調整済み）
     function addMenuField(name = '', price = '') {
       const container = document.getElementById('menus-container');
       const div = document.createElement('div');
-      div.className = "flex gap-1.5 items-center menu-row";
+      div.className = "flex gap-1.5 items-center menu-row w-full";
       div.innerHTML = `
-        <input type="text" placeholder="品名 (例: たこ焼き)" value="${name}" class="menu-name flex-1 p-2 border rounded-lg text-xs">
-        <input type="text" placeholder="価格" value="${price}" class="menu-price w-20 p-2 border rounded-lg text-xs">
-        <button type="button" onclick="removeMenuField(this)" class="p-2 text-slate-400 hover:text-rose-500 font-bold text-xs">✕</button>
+        <input type="text" placeholder="品名 (例: たこ焼き)" value="${name}" class="menu-name flex-1 min-w-0 p-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
+        <input type="text" placeholder="価格" value="${price}" class="menu-price w-16 sm:w-20 shrink-0 p-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
+        <button type="button" onclick="removeMenuField(this)" class="shrink-0 p-1 text-slate-400 hover:text-rose-500 font-bold text-xs">✕</button>
       `;
       container.appendChild(div);
     }
@@ -355,7 +356,6 @@
       });
     }
 
-    // 店舗情報の更新（店舗名の変更も同時に送信）
     async function submitUpdate() {
       const id = document.getElementById('select-store').value;
       const password = document.getElementById('input-password').value;
@@ -406,7 +406,6 @@
       }
     }
 
-    // 店舗情報の削除処理
     async function submitDelete() {
       const id = document.getElementById('select-store').value;
       const password = document.getElementById('input-password').value;
