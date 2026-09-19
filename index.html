@@ -47,6 +47,14 @@
         <p id="location-status" class="text-[11px] font-bold text-indigo-600 mt-1">※地図上をタップして店舗の位置を指定してください</p>
       </div>
 
+      <!-- 新規登録時のSNS情報 -->
+      <div class="mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+        <label class="block text-xs font-bold text-slate-600 mb-1">SNS・Webリンク (任意)</label>
+        <input type="text" id="reg-insta" placeholder="Instagram (ユーザー名またはURL)" class="w-full p-2 border border-slate-200 rounded-lg text-xs">
+        <input type="text" id="reg-x" placeholder="X / Twitter (ユーザー名またはURL)" class="w-full p-2 border border-slate-200 rounded-lg text-xs">
+        <input type="text" id="reg-web" placeholder="Webサイト・予約ページ等のURL" class="w-full p-2 border border-slate-200 rounded-lg text-xs">
+      </div>
+
       <div class="mb-6 bg-rose-50 p-3 rounded-xl border border-rose-200">
         <label class="block text-xs font-bold text-rose-600 mb-1">店舗パスワード (必須)</label>
         <input type="text" id="reg-password" placeholder="今後の更新・削除に使う合言葉" class="w-full p-3 border border-rose-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-rose-500">
@@ -86,10 +94,27 @@
           </div>
         </div>
 
-        <!-- メニュー（スマホ表示最適化済み） -->
+        <!-- SNS・Webリンク更新 -->
+        <div class="mb-5 bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+          <label class="block text-xs font-bold text-slate-600 mb-1">③ SNS・Webリンクの変更（任意）</label>
+          <div>
+            <span class="text-[10px] font-bold text-slate-500">Instagram</span>
+            <input type="text" id="input-insta" placeholder="ユーザー名(例: shop_name) または URL" class="w-full p-2 border border-slate-200 rounded-lg text-xs">
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-slate-500">X (旧Twitter)</span>
+            <input type="text" id="input-x" placeholder="ユーザー名(例: shop_name) または URL" class="w-full p-2 border border-slate-200 rounded-lg text-xs">
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-slate-500">Webサイト / 予約リンク</span>
+            <input type="text" id="input-web" placeholder="https://example.com" class="w-full p-2 border border-slate-200 rounded-lg text-xs">
+          </div>
+        </div>
+
+        <!-- メニュー -->
         <div class="mb-5 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <div class="flex justify-between items-center mb-2">
-            <label class="block text-xs font-bold text-slate-600">③ メニュー・価格の変更（任意）</label>
+            <label class="block text-xs font-bold text-slate-600">④ メニュー・価格の変更（任意）</label>
             <button type="button" onclick="addMenuField()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm shrink-0">＋ 追加</button>
           </div>
           <div id="menus-container" class="space-y-2 w-full"></div>
@@ -97,7 +122,7 @@
 
         <!-- 写真 -->
         <div class="mb-5 bg-slate-50 p-3 rounded-xl border border-slate-200">
-          <label class="block text-xs font-bold text-slate-600 mb-1">④ 店舗写真の変更（任意）</label>
+          <label class="block text-xs font-bold text-slate-600 mb-1">⑤ 店舗写真の変更（任意）</label>
           <input type="file" id="input-image" accept="image/*" onchange="previewImage(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200">
           <div id="image-preview-container" class="mt-2 hidden">
             <img id="image-preview" src="" alt="写真プレビュー" class="w-full h-36 object-cover rounded-xl border">
@@ -106,7 +131,7 @@
 
         <!-- パスワード -->
         <div class="mb-6 bg-rose-50 p-3 rounded-xl border border-rose-200">
-          <label class="block text-xs font-bold text-rose-600 mb-1">⑤ 店舗パスワード（必須）</label>
+          <label class="block text-xs font-bold text-rose-600 mb-1">⑥ 店舗パスワード（必須）</label>
           <input type="password" id="input-password" placeholder="合言葉を入力してください" class="w-full p-3 border border-rose-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-rose-500">
         </div>
 
@@ -118,7 +143,7 @@
         <div class="mt-8 pt-6 border-t border-slate-200">
           <div class="bg-rose-50 p-4 rounded-xl border border-rose-200">
             <h3 class="text-xs font-bold text-rose-700 mb-1">⚠️ 店舗情報の削除</h3>
-            <p class="text-[11px] text-rose-600 mb-3">この店舗のデータを完全に削除します。実行には上記の「⑤ 店舗パスワード」が必要です。</p>
+            <p class="text-[11px] text-rose-600 mb-3">この店舗のデータを完全に削除します。実行には上記の「⑥ 店舗パスワード」が必要です。</p>
             <button type="button" onclick="submitDelete()" id="btn-delete" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl shadow-sm text-xs transition-all flex items-center justify-center gap-1">
               🗑️ この店舗を削除する
             </button>
@@ -218,6 +243,10 @@
       const category = document.getElementById('reg-category').value;
       const password = document.getElementById('reg-password').value.trim();
 
+      const insta = document.getElementById('reg-insta').value.trim();
+      const x = document.getElementById('reg-x').value.trim();
+      const web = document.getElementById('reg-web').value.trim();
+
       if (!name || !password) return alert("店舗名とパスワードは必須です。");
       if (selectedLat === null || selectedLng === null) return alert("地図上をタップして店舗の位置を指定してください。");
 
@@ -234,7 +263,10 @@
             category: category,
             password: password,
             lat: selectedLat,
-            lng: selectedLng
+            lng: selectedLng,
+            instagram: insta,
+            x: x,
+            website: web
           })
         });
         const result = await response.json();
@@ -243,6 +275,9 @@
           alert("店舗の新規登録が完了しました！");
           document.getElementById('reg-name').value = "";
           document.getElementById('reg-password').value = "";
+          document.getElementById('reg-insta').value = "";
+          document.getElementById('reg-x').value = "";
+          document.getElementById('reg-web').value = "";
           selectedLat = null;
           selectedLng = null;
           if (regMarker) regMap.removeLayer(regMarker);
@@ -276,6 +311,10 @@
       const store = storesData.find(s => String(s["ID"]) === String(id));
       if (store) {
         document.getElementById('input-store-name').value = store["店舗名"] || '';
+        document.getElementById('input-insta').value = store["Instagram"] || '';
+        document.getElementById('input-x').value = store["X"] || '';
+        document.getElementById('input-web').value = store["Webサイト"] || '';
+
         setStatus(store["混雑状況"] || '空いています');
         
         const container = document.getElementById('menus-container');
@@ -304,7 +343,6 @@
       }
     }
 
-    // メニュー入力行（スマホ横幅調整済み）
     function addMenuField(name = '', price = '') {
       const container = document.getElementById('menus-container');
       const div = document.createElement('div');
@@ -361,6 +399,10 @@
       const password = document.getElementById('input-password').value;
       const name = document.getElementById('input-store-name').value.trim();
 
+      const insta = document.getElementById('input-insta').value.trim();
+      const x = document.getElementById('input-x').value.trim();
+      const web = document.getElementById('input-web').value.trim();
+
       if (!id) return alert("店舗を選択してください。");
       if (!name) return alert("店舗名を入力してください。");
       if (!password) return alert("店舗パスワードを入力してください。");
@@ -383,6 +425,9 @@
         name: name,
         password: password,
         status: selectedStatus,
+        instagram: insta,
+        x: x,
+        website: web,
         menus: menus
       };
       if (currentBase64Image) payload.base64Image = currentBase64Image;
@@ -412,7 +457,7 @@
       const storeName = document.getElementById('input-store-name').value;
 
       if (!id) return alert("店舗を選択してください。");
-      if (!password) return alert("削除を行うには「⑤ 店舗パスワード」の入力が必要です。");
+      if (!password) return alert("削除を行うには「⑥ 店舗パスワード」の入力が必要です。");
 
       const confirmResult = confirm(`本当に「${storeName}」の店舗データを完全削除しますか？\n※この操作は取り消せません。`);
       if (!confirmResult) return;
